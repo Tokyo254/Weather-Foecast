@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+```{r}
+library("ggpubr")
+library("ggplot2")
+```
+
+
+```{r}
+# Data Importation
+incidence <- read.csv("incidence.csv")
+# Conversion of county and Incidence Variables to Factors
+incidence$County <- as.factor(incidence$County)
+incidence$Incidence <- as.factor(incidence$Incidence)
+# Two-way ANOVA without interaction
+summary(fn <- aov(Rate ~ County + Incidence,
+  data = incidence
+))
+
+#Tukey multiple pairwise-comparisons
+
+TukeyHSD(fn, which = "County")
+```
+
+```{r}
+# Data Importation
+severity <- read.csv("Severity.csv")
+# Conversion of county and Incidence Variables to Factors
+severity$County <- as.factor(severity$County)
+severity$Severity <- as.factor(severity$Severity)
+
+# Two-way ANOVA without interaction
+summary(fn2 <- aov(Rate ~ County + Severity,
+  data = severity
+))
+#Tukey multiple pairwise-comparisons
+
+TukeyHSD(fn2, which = "County")
+```
+```{r}
+# Data Importation
+SubCountyIncidence <- read.csv("SubcountyIncidence.csv")
+# Conversion of county and Incidence Variables to Factors
+SubCountyIncidence$Sub.Counties <- as.factor(SubCountyIncidence$Sub.Counties)
+SubCountyIncidence$Incidence <- as.factor(SubCountyIncidence$Incidence)
+
+# Two-way ANOVA without interaction
+summary(fn3 <- aov(Value ~ Incidence + Sub.Counties, data = SubCountyIncidence))
+
+#Tukey multiple pairwise-comparisons
+
+TukeyHSD(fn3, which = "Sub.Counties")
+
+```
+```{r}
+# Data Importation
+SubCountySeverity <- read.csv("SubCountySeverity.csv")
+# Conversion of county and Incidence Variables to Factors
+SubCountySeverity$Sub.Counties <- as.factor(SubCountySeverity$Sub.Counties)
+SubCountySeverity$Severity <- as.factor(SubCountySeverity$Severity)
+
+# Two-way ANOVA without interaction
+summary(fn4 <- aov(Rate ~ Sub.Counties + Severity,
+  data = SubCountySeverity
+))
+#Tukey multiple pairwise-comparisons
+
+TukeyHSD(fn4, which = "Sub.Counties")
+
+```
+
+
+```{r}
+#CORRELATION BETWEEN INCIDENCE AND SEVERITY
+
+Correl <- read.csv("correlation.csv")
+ library(ggplot2)
+Plt2 <-  ggplot(Correl, aes(x = incidence, y = Severity)) + geom_point() +  geom_smooth(method = "lm", se = TRUE, color = 'black')
+
+res <- cor.test(Correl$incidence, Correl$Severity, 
+                    method = "pearson")
+res
+
+```
+```{r}
+# Data Importation
+incidenceseverity <- read.csv("IncidenceSeverity.csv")
+# Conversion of county and Incidence Variables to Factors
+incidenceseverity$County <- as.factor(incidenceseverity$County)
+incidenceseverity$Severity <- as.factor(incidenceseverity$Severity)
+
+# Two-way ANOVA without interaction
+summary(fn5 <- aov( incidence ~  County * Severity,
+  data = incidenceseverity
+))
+```
+
+```{r}
+# Plotting the data
+plot(Correl$incidence, Correl$Severity, 
+     main="Scatterplot", 
+     xlab="Incidence", 
+     ylab="Severity")
+
+# Fit the linear model
+model <- lm(Severity ~ incidence, data=Correl)
+
+# View the model summary
+summary(model)
+
+
+```
+```{r}
+library(tidyverse)
+library(dplyr, warn.conflicts = FALSE)
+library(tidygeocoder)
+library(leaflet)
+library(OpenStreetMap)
+
+GeoData <- read.csv("GeoData.csv")
+GeoData <- as.data.frame(GeoData)
+
+GeoData_ <- addr %>%
+ geocode(Village, method = "osm", lat = Latitude, long = Longitude, full_results = TRUE)
+GeoData_
+```
+
+```{r}
+library(dplyr)
+library(tidygeocoder)
+install.packages("OpenStreetMap")
+library(osmdata)
+
+dc_addresses <- tribble( ~name,~addr,
+"White House", "1600 Pennsylvania Ave Washington, DC",
+"National Academy of Sciences", "2101 Constitution Ave NW, Washington, DC 20418",
+"Department of Justice", "950 Pennsylvania Ave NW, Washington, DC 20530",
+"Supreme Court", "1 1st St NE, Washington, DC 20543",
+"Washington Monument", "2 15th St NW, Washington, DC 20024")
+
+coordinates <- dc_addresses %>%
+  geocode(addr)
+
+library(osmdata)
+# List the features of OSM data
+available_features()
+
+
+
+library(OpenStreetMap)
+dc_map <- openmap( c(38.905,-77.05),c(38.885,-77.00))
+dc_map.latlng <- openproj(dc_map)
+
+library(ggplot2)
+library(ggrepel)
+autoplot(dc_map.latlng) +
+  theme_minimal() +
+  theme(      axis.text.y=element_blank(),
+              axis.title=element_blank(),
+              axis.text.x=element_blank(),
+              plot.margin = unit(c(0, 0, 0, 0), "cm")
+              ) +
+  geom_point(data=coordinates, aes(x=long, y=lat), color="navy", size=s4, alpha=1) +
+  geom_label_repel(data=coordinates,
+        aes(label=name,x=long, y=lat),show.legend=F,box.padding=.5,size = 5)
+```
+
+
+
+
