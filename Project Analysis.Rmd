@@ -1,0 +1,159 @@
+---
+title: "Project"
+output: html_notebook
+---
+
+
+```{r}
+install.packages("dplyr")
+install.packages("Hmisc")
+install.packages("ggplot2")
+install.packages("tidyr")
+install.packages("astsa")
+install.packages("smooth")
+library(cowplot)
+library(imputeTS)
+library(astsa)
+library(ggplot2)
+library(tidyr)
+library(Hmisc)
+library(dplyr)
+```
+
+## Reading data into R and Renaming the Variables for easier analysis.
+
+```{r}
+Climate_data <- read.csv("Kibabii Climate Data 2.csv")
+Climate_data <- Climate_data %>% rename(Atmospheric_Pressure = atmosphericpressure..kPa., Precipitation = precipitation..mm., radiation = radiation..W.m2., Relative_humidity = relativehumidity...., Temperature = temperature..degrees.Celsius., Winddirection = winddirection..degrees., windgusts = windgusts..m.s., windspeed = windspeed..m.s.)
+```
+
+## Removing Unnecessary Columns
+
+```{r}
+Climate_data2 <- Climate_data %>% select(-c(2,3,4))
+str(Climate_data2)
+summary(Climate_data2)
+```
+## Removing Missing Values 
+
+```{}
+NAs_Rel_humidity <-Climate_data2 %>% subset(is.na(Relative_humidity))
+NAs_Temp <-Climate_data2 %>% subset(is.na(Temperature))
+NAs_winddirection <-Climate_data2 %>% subset(is.na(Winddirection))
+NAs_windgusts <-Climate_data2 %>% subset(is.na(windgusts))
+NAs_windspeed <-Climate_data2 %>% subset(is.na(windspeed))
+
+```
+
+## Imputing the missing values with the median
+
+```{}
+Climate_data2$Relative_humidity[is.na(Climate_data2$Relative_humidity)] <- median(Climate_data2$Relative_humidity, na.rm = FALSE)
+
+```
+
+## Visualize the missing observations
+
+```{r}
+rel_humidityts <- ts(Climate_data2$Relative_humidity)
+temperaturets <- ts(Climate_data2$Temperature)
+winddirectionts <- ts(Climate_data2$Winddirection)
+windspeedts <- ts(Climate_data2$windspeed)
+windgustts <- ts(Climate_data2$windgusts)
+
+p1 <- ggplot_na_distribution(rel_humidityts)
+p2 <-ggplot_na_distribution(temperaturets)
+p3 <-ggplot_na_distribution(winddirectionts)
+p4 <-ggplot_na_distribution(windgustts)
+p5 <-ggplot_na_distribution(windspeedts)
+
+plot_grid(p1,p2,p3,p4,p5, labels = c("Relative_Humidity","Temperature","Winddirection","Windgusts","Windspeed"))
+```
+
+## Interpolation of the missing values
+
+```{r}
+
+B1 <- plot(na_interpolation(rel_humidityts, option = "spline"))
+B2 <- plot(na_interpolation(temperaturets, option = "spline"))
+B3 <- plot(na_interpolation(winddirectionts, option = "spline"))
+B4 <- plot(na_interpolation(windgustts, option = "spline"))
+B5 <- plot(na_interpolation(windspeedts, option = "spline"))
+
+plot_grid(B1,B2,B3,B4,B5, labels = c("Relative_Humidity","Temperature","Winddirection","Windgusts","Windspeed"))
+```
+
+## Cleaning the time series plot to eliminate outliers
+
+```{r}
+Relts <- na_interpolation(rel_humidityts, option = "spline")
+tempts <- na_interpolation(temperaturets, option = "spline")
+wspeedts <- na_interpolation(windspeedts, option = "spline")
+wguststs <- na_interpolation(windgustts, option = "spline")
+wdirects <- na_interpolation(winddirectionts, option = "spline")
+
+
+Relts <- tsclean(Relts)
+tempts <- tsclean(tempts)
+wspeedts <- tsclean(wspeedts)
+wguststs <- tsclean(wspeedts)
+wdirects <- tsclean(wdirects)
+
+```
+## Augmented Dickey Fuller Test
+
+```{r}
+adf.test(Relts)
+adf.test(tempts)
+adf.test(wspeedts)
+adf.test(wguststs)
+adf.test(wspeedts)
+
+```
+## Data Splitting into training and test set
+```{r}
+Reltstrain <- head(Relts, round(length(Relts) * 0.9))
+h <- length(Relts) - length(Reltstrain)
+test <- tail(Relts, h)
+plot(Reltstrain)
+acf2(Reltstrain)
+
+```
+
+```{r}
+temptstrain <- head(tempts, round(length(Relts) * 0.9))
+h1 <- length(tempts) - length(temptstrain)
+temptstest <- tail(tempts, h1)
+plot(temptstrain)
+```
+
+```{r}
+wspeedtrain <- head(wspeedts, round(length(wspeedts) * 0.9))
+h2 <- length(wspeedts) - length(wspeedtrain)
+wspeedtest <- tail(wspeedtrain, h2)
+plot(wspeedtrain)
+```
+
+
+```{r}
+wsgusttrain <- head(wguststs, round(length(wguststs) * 0.9))
+h3 <- length(wguststs) - length(wsgusttrain)
+wsguststest <- tail(wguststs, h3)
+plot(wsgusttrain)
+```
+
+```{r}
+wsdiretrain <- head(wdirects, round(length(wdirects) * 0.9))
+h4 <- length(wdirects) - length(wsdiretrain)
+wdirecttest <- tail(wdirects, h4)
+plot(wsdiretrain)
+```
+```{r}
+acf2(Reltstrain, 200)
+acf2(temptstrain,200)
+acf2(wspeedtrain,200)
+acf2(wsgusttrain,200)
+acf2(wsdiretrain,200)
+```
+
+
